@@ -8,7 +8,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 def plot_results_perceptron(weights, miss_rate, labels, pred):
     """Plot the results of the perceptron"""
 
-    cm = confusion_matrix(labels, pred)
+    cm = confusion_matrix(labels, pred, labels=np.unique(labels))
     acc = accuracy_score(labels, pred)
 
     fig, ax = plt.subplots(1, 3, figsize=(10, 3), dpi=200)

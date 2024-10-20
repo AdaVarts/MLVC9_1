@@ -39,7 +39,7 @@ class SquareLoss(object):
         y_true = y_true if self.activation == "sigmoid" else np.where(y_true > 0, 1, -1)
 
         # *****BEGINNING OF YOUR CODE (DO NOT DELETE THIS LINE)*****
-        return
+        return 0.5 * np.mean((y_true - y_pred) ** 2)
         # *****END OF YOUR CODE (DO NOT DELETE THIS LINE)*****
 
     def delta(self, y_true, y_pred):
@@ -57,7 +57,7 @@ class SquareLoss(object):
         y_true = y_true if self.activation == "sigmoid" else np.where(y_true > 0, 1, -1)
 
         # *****BEGINNING OF YOUR CODE (DO NOT DELETE THIS LINE)*****
-        return
+        return y_pred - y_true
         # *****END OF YOUR CODE (DO NOT DELETE THIS LINE)*****
 
     def calculate_accuracy(self, y_true, y_pred):
@@ -72,28 +72,29 @@ class SquareLoss(object):
             float: Accuracy value.
         """
         # *****BEGINNING OF YOUR CODE (DO NOT DELETE THIS LINE)*****
-        return
+        y_pred_binary = np.where(y_pred >= self.threshold, 1, 0)
+        return np.mean(y_pred_binary == y_true)
         # *****END OF YOUR CODE (DO NOT DELETE THIS LINE)*****
 
 
 # Activation functions and their derivatives
 activation_functions = {
             # *****BEGINNING OF YOUR CODE (DO NOT DELETE THIS LINE)*****
-            "sigmoid": None,
+            "sigmoid": lambda x: 1.0/(1.0 + np.exp(-x)),
             # *****END OF YOUR CODE (DO NOT DELETE THIS LINE)*****
             "tanh": lambda x: np.tanh(x),
 }
 
 activation_function_threshold = {
             # *****BEGINNING OF YOUR CODE (DO NOT DELETE THIS LINE)*****
-            "sigmoid": None,
+            "sigmoid": 0.45,
             # *****END OF YOUR CODE (DO NOT DELETE THIS LINE)*****
             "tanh": 0,
 }
 
 activation_derivatives = {
             # *****BEGINNING OF YOUR CODE (DO NOT DELETE THIS LINE)*****
-            "sigmoid": None,
+            "sigmoid": lambda x: x * (1 - x),
             # *****END OF YOUR CODE (DO NOT DELETE THIS LINE)*****
             "tanh": lambda x: 1 - x**2,
 }
@@ -264,20 +265,26 @@ class MultiLayerPerceptron:
 
         # *****BEGINNING OF YOUR CODE (DO NOT DELETE THIS LINE)*****
         # 1. Calculate error and derivatives for the output layer (Layer 3)
-
+        output_error = self.loss.delta(gt, pred)
+        output_gradient = (output_error * self.derivative_function(pred)).flatten()
+        
         # 2. Calculate error and derivatives for the hidden layer 2 (Layer 2)
+        hidden_error2 = np.dot(output_gradient, self.output_weight.T)
+        hidden_gradient2 = hidden_error2 * self.derivative_function(self.fc2_w_acti)
 
         # 3. Calculate error and derivatives for the hidden layer 1 (Layer 1)
-
+        hidden_error1 = np.dot(hidden_gradient2, self.hidden_weight2.T)
+        hidden_gradient1 = hidden_error1 * self.derivative_function(self.fc1_w_acti)
+                                                             
         # 4. Update weights for each layer
-        self.output_weight += self.output_weight  # to be corrected by you
-        self.hidden_weight2 += self.hidden_weight2  # to be corrected by you
-        self.hidden_weight += self.hidden_weight  # to be corrected by you
+        self.output_weight -= self.lr * output_gradient * self.fc2_w_acti[:, np.newaxis]
+        self.hidden_weight2 -= self.lr * hidden_gradient2 * self.fc1_w_acti[:, np.newaxis]
+        self.hidden_weight -= self.lr * hidden_gradient1 * input[:, np.newaxis]
 
         # 5. Update biases for each layer
-        self.output_bias += self.output_bias  # to be corrected by you
-        self.hidden_bias2 += self.hidden_bias2  # to be corrected by you
-        self.hidden_bias += self.hidden_bias  # to be corrected by you
+        self.output_bias -= self.lr * output_gradient
+        self.hidden_bias2 -= self.lr * hidden_gradient2
+        self.hidden_bias -= self.lr * hidden_gradient1
         # *****END OF YOUR CODE (DO NOT DELETE THIS LINE)*****
 
     def forward(self, inputs):
@@ -291,13 +298,13 @@ class MultiLayerPerceptron:
 
         # *****BEGINNING OF YOUR CODE (DO NOT DELETE THIS LINE)*****
         # 1. Pass through hidden fully-connected layer 1
-        self.fc1_w_acti = 0  # to be corrected by you
+        self.fc1_w_acti = self.activation_function(np.dot(inputs, self.hidden_weight) + self.hidden_bias)
 
         # 2. Pass through hidden fully-connected layer 2
-        self.fc2_w_acti = self.fc1_w_acti  # to be corrected by you
+        self.fc2_w_acti = self.activation_function(np.dot(self.fc1_w_acti, self.hidden_weight2) + self.hidden_bias2)
 
         # 3. Pass through output fully-connected layer
-        self.fc3_w_acti = self.fc2_w_acti  # to be corrected by you
+        self.fc3_w_acti = self.activation_function(np.dot(self.fc2_w_acti, self.output_weight) + self.output_bias)
         # *****END OF YOUR CODE (DO NOT DELETE THIS LINE)*****
 
         return self.fc3_w_acti
