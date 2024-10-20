@@ -1,6 +1,7 @@
 from random import randint
 
 import numpy as np
+import sklearn.linear_model
 from tqdm import trange
 
 ########### TO-DO ###########
@@ -11,7 +12,6 @@ from tqdm import trange
 # 3. Implement prediction
 #   --> See: def predict(self, X):
 #       - X is data
-
 
 class Perceptron:
     """
@@ -43,7 +43,8 @@ class Perceptron:
         numpy.ndarray: Class labels.
         """
         # *****BEGINNING OF YOUR CODE (DO NOT DELETE THIS LINE)*****
-        return
+        x = np.dot(X.T, self.w) + self.b
+        return np.where(x >= 0, 1, -1)
         # *****END OF YOUR CODE (DO NOT DELETE THIS LINE)*****
 
     def fit(self, X, y):
@@ -86,8 +87,9 @@ class Perceptron:
                 prediction_for_update = self.forward(X[n, :])
                 # update the weights of the perceptron at random
                 # *****BEGINNING OF YOUR CODE (DO NOT DELETE THIS LINE)*****
-                self.w = self.w
-                self.b = self.b
+                grad = self.lr * (y[n] - prediction_for_update)
+                self.w += grad * X[n, :]
+                self.b += grad
                 # *****END OF YOUR CODE (DO NOT DELETE THIS LINE)*****
 
             # Appending number of misclassified examples
@@ -107,5 +109,5 @@ class Perceptron:
         numpy.ndarray: Predicted class labels.
         """
         # *****BEGINNING OF YOUR CODE (DO NOT DELETE THIS LINE)*****
-        return
+        return self.forward(X.T)
         # *****END OF YOUR CODE (DO NOT DELETE THIS LINE)*****
