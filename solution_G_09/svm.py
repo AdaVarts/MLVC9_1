@@ -126,14 +126,14 @@ class SVM:
         # Select the support vectors (where alphas > threshold)
         support_vector_indices = alphas > 1e-5
         self.__alphas = alphas[support_vector_indices]
-        self.__training_X = X[support_vector_indices] # inputs at support vector indices (training)
+        X = X[support_vector_indices]
         y = y[:, support_vector_indices].flatten()
         # Calculate bias with only average of support vector: y_i ​ − SUM(j = 1, i)(a_j * ​y_j * ​K(x_j​,x_i​))
         self.__bias = np.mean(y - np.sum(self.__alphas[:, np.newaxis] * y[:, np.newaxis] * K[support_vector_indices][:, support_vector_indices], axis=1))
         # *****END OF YOUR CODE (DO NOT DELETE THIS LINE)*****
 
         self.__targets = y
-        #self.__training_X = X
+        self.__training_X = X
 
     def predict(self, X):
         """Prediction function.
