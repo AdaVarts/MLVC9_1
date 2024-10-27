@@ -43,7 +43,9 @@ class SVM:
             numpy.ndarray: A matrix of shape (n_samples_1, n_samples_2) representing the linear kernel between x1 and x2.
         """
         # *****BEGINNING OF YOUR CODE (DO NOT DELETE THIS LINE)*****
-        return
+        #print(x1.shape)
+        #print(x2.shape)
+        return np.dot(x1,x2.T)
         # *****END OF YOUR CODE (DO NOT DELETE THIS LINE)*****
 
     @staticmethod
@@ -60,7 +62,12 @@ class SVM:
         """
 
         # *****BEGINNING OF YOUR CODE (DO NOT DELETE THIS LINE)*****
-        return
+        result = np.zeros((x1.shape[0], x2.shape[0]))
+        for i in range(x1.shape[0]):
+            for j in range(x2.shape[0]):
+                r = np.linalg.norm(x1[i] - x2[j]) # Euclidian distance
+                result[i, j] = np.exp( - ( r / sigma )**2 ) # Gaußian, https://en.wikipedia.org/wiki/Radial_basis_function
+        return result
         # *****END OF YOUR CODE (DO NOT DELETE THIS LINE)*****
 
     def fit(self, X, y):
@@ -93,12 +100,20 @@ class SVM:
 
         # *****BEGINNING OF YOUR CODE (DO NOT DELETE THIS LINE)*****
         # SEE: https://cvxopt.org/examples/tutorial/qp.html and https://cvxopt.org/userguide/coneprog.html#quadratic-programming and http://www.seas.ucla.edu/~vandenbe/publications/mlbook.pdf
-        Q = cvxopt.matrix() # to be corrected by you
-        p = cvxopt.matrix() # to be corrected by you
-        G = cvxopt.matrix() # to be corrected by you
-        h = cvxopt.matrix() # to be corrected by you
-        A = cvxopt.matrix() # to be corrected by you
-        b = cvxopt.matrix() # to be corrected by you
+        
+        # Hessian matrix in the quadratic form
+        Q = cvxopt.matrix(np.outer(y,y) * K) 
+
+        # matrix in dual form in SVM p= -1 vector
+        p = cvxopt.matrix(-np.ones((n_observations, 1))) 
+        # Inequality Constraints: Gx ≤ h
+        # stacked matricis shape -I and I (identity)
+        G = cvxopt.matrix(np.concatenate((-np.identity(n_observations), np.identity(n_observations)), axis=0)) 
+        h = cvxopt.matrix(np.concatenate((np.zeros(n_observations), np.ones(n_observations) * 1), axis=0)) 
+
+        # Equality Constraints: Ax = b
+        A = cvxopt.matrix(y, (1, n_observations)) 
+        b = cvxopt.matrix(0.0) 
         # *****END OF YOUR CODE (DO NOT DELETE THIS LINE)*****
 
         cvxopt.solvers.options["show_progress"] = False
@@ -106,8 +121,15 @@ class SVM:
 
         # *****BEGINNING OF YOUR CODE (DO NOT DELETE THIS LINE)*****
         # Save the solution
-        self.__alphas = None
-        self.__bias = None
+        alphas = np.array(solution['x']).flatten()
+
+        # Select the support vectors (where alphas > threshold)
+        support_vector_indices = alphas > 1e-5
+        self.__alphas = alphas[support_vector_indices]
+        X = X[support_vector_indices]
+        y = y[:, support_vector_indices].flatten()
+        # Calculate bias with only average of support vector: y_i ​ − SUM(j = 1, i)(a_j * ​y_j * ​K(x_j​,x_i​))
+        self.__bias = np.mean(y - np.sum(self.__alphas[:, np.newaxis] * y[:, np.newaxis] * K[support_vector_indices][:, support_vector_indices], axis=1))
         # *****END OF YOUR CODE (DO NOT DELETE THIS LINE)*****
 
         self.__targets = y
@@ -127,7 +149,13 @@ class SVM:
 
         # *****BEGINNING OF YOUR CODE (DO NOT DELETE THIS LINE)*****
         if self.__kernel == SVM.linear_kernel:
-            return 
+            # kernel matrix between test and training set
+            K = self.__kernel(X, self.__training_X)
+            predictions = np.dot(K, self.__alphas * self.__targets) + self.__bias
+            return np.sign(predictions)
         elif self.__kernel == SVM.rbf_kernel:
-            return 
+            K = self.__kernel(X, self.__training_X, self.__sigma)
+            #print(self.__alphas * self.__targets.shape)
+            predictions = np.dot(K, self.__alphas * self.__targets) + self.__bias
+            return np.sign(predictions)
         # *****END OF YOUR CODE (DO NOT DELETE THIS LINE)*****
